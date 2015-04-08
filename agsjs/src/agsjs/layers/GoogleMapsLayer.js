@@ -1,12 +1,12 @@
 /**
  * @name Google Maps Layer for ArcGIS Server JavaScript API
- * @author: Nianwei Liu 
+ * @author: Nianwei Liu
  * @fileoverview
  * <p>Use Google Maps in application built on ESRI ArcGIS Server JavaScript API.
  *  </p>
  */
-// Change log: 
-//2012-07-15: v2.0, update to jsapi3.0/dojo1.7, simplified. 
+// Change log:
+//2012-07-15: v2.0, update to jsapi3.0/dojo1.7, simplified.
 // drop features related to sublayers for google maps, client code can do it after get reference to gmap instance.
 // constructor parameter syntax changed slightly for BasemapGallery.
 // streetview control is on by default.
@@ -44,7 +44,7 @@
      * @property {String} [libraries] Additonal libraries (geometry|places|adsense);
      *
      */
-    /** 
+    /**
      * Create a GoogleMapsLayer using config {@link GoogleMapsLayerOptions}
      * @name GoogleMapsLayer
      * @constructor
@@ -53,7 +53,7 @@
      */
     constructor: function(opts) {
       opts = opts || {};
-      // this tileInfo does not actually do anything. It simply tricks nav control to 
+      // this tileInfo does not actually do anything. It simply tricks nav control to
       // show a slider bar if only gmaps are used, which should be a rare case.
       this.tileInfo = new esri.layers.TileInfo({
         rows: 256,
@@ -152,7 +152,7 @@
           scale: 564.248588
         }]
       });
-      
+
       this.fullExtent = new esri.geometry.Extent({
         xmin: -20037508.34,
         ymin: -20037508.34,
@@ -176,15 +176,15 @@
       this._apiOptions = dojo.mixin({
         sensor: false
       }, opts.apiOptions || {});
-      
-      /*if (this._mapOptions.streetViewControl == undefined) {
-       this._mapOptions.streetViewControl = false;
-       }*/
+
+      //if (this._mapOptions.streetViewControl == undefined) {
+      //  this._mapOptions.streetViewControl = false;
+      //}
       this._gmap = null;
       this.loaded = true;// it seems _setMap will only get called if loaded = true, so set it here first.
       this.onLoad(this);
     },
-    
+
     /**
      * get the wrapped <code>google.maps.Map</code> for further customization.
      * @function
@@ -208,7 +208,7 @@
      *
      **********************/
     _setMap: function(map, container) {
-      // This overrides an undocumented private method from ESRI API. 
+      // This overrides an undocumented private method from ESRI API.
       // It's possible not to do this, but it requires
       // map instance implicitly set to the layer instance, which is a little bit inconvenient.
       // this is likely called inside esriMap.addLayer()
@@ -232,7 +232,7 @@
       dojo.style(div, 'width', (map.width || container.offsetWidth) + 'px');
       dojo.style(div, 'height', (map.height || container.offsetHeight) + 'px');
       this._gmapDiv = div;
-      
+
       // topDiv is used to mask all esri events in oblique mode.
       var tdiv = dojo.create('div', {}, map.id);
       tdiv.id = 'gmaps_top_' + div.id;
@@ -248,13 +248,13 @@
         left: '5px'
       }));
       this._controlDiv = cdiv;
-      
+
       //this._container = layersDiv;
       // Event connections
       this._connects = [];
       this._connects.push(dojo.connect(this, 'onVisibilityChange', this, this._visibilityChangeHandler));
       this._connects.push(dojo.connect(this, 'onOpacityChange', this, this._opacityChangeHandler));
-      
+
       this.visible = (this.visible === undefined) ? true : this.visible;
       if (this.visible) {
         this._initGMap();
@@ -268,23 +268,23 @@
         this._streetView.setVisible(false);
       }
       if (google && google.maps && google.maps.event) {
-        if (this._gmapTypeChangeHandle) 
+        if (this._gmapTypeChangeHandle)
           google.maps.event.removeListener(this._gmapTypeChangeHandle);
-        if (this._svVisibleHandle) 
+        if (this._svVisibleHandle)
           google.maps.event.removeListener(this._svVisibleHandle);
       }
-      if (this._element) 
+      if (this._element)
         this._element.parentNode.removeChild(this._element);
       dojo.destroy(this._element);
-      if (this._controlDiv) 
+      if (this._controlDiv)
         this._controlDiv.parentNode.removeChild(this._controlDiv);
       dojo.destroy(this._controlDiv);
-      if (this._topDiv) 
+      if (this._topDiv)
         this._topDiv.parentNode.removeChild(this._topDiv);
       dojo.destroy(this._topDiv);
       this._element = this._gmapDiv = this._controlDiv = null;
     },
-    
+
     // delayed init and Api loading.
     _initGMap: function() {
       window.google = window.google || {}; // somehow IE needs this, otherwise complain google.maps namespace;
@@ -300,7 +300,7 @@
           mapTypeControl: false,
           zoomControl: false
         }, this._mapOptions);
-        
+
         if (myOptions.mapTypeId) {
           myOptions.mapTypeId = this._getGMapTypeId(myOptions.mapTypeId);
         } else {
@@ -314,7 +314,7 @@
         }
         this._gmap = gmap;
         this._setExtent(ext);
-        
+
         this._extentChangeHandle = dojo.connect(this._map, 'onExtentChange', this, this._extentChangeHandler);
         this._panHandle = dojo.connect(this._map, 'onPan', this, this._panHandler);
         this._resizeHandle = dojo.connect(this._map, 'onResize', this, this._resizeHandler);
@@ -353,7 +353,7 @@
         }
       }
     },
-    
+
     /**
      * Sets Opacity
      * @name GoogleMapsLayer#setOpacity
@@ -425,7 +425,7 @@
       // event
     },
     _getGMapTypeId: function(type) {
-      // typically the constants is same, however, if google changes, 
+      // typically the constants is same, however, if google changes,
       // and API is loaded dynamically but map type is specified before API load,
       // there is a slight chance they are out of sync, so fix here.
       if (google && google.maps) {
@@ -446,7 +446,7 @@
       // this probably should be handled in the core ESRI API using the div returned from _setMap().
       this.setOpacity(opacity);
     },
-    
+
     _visibilityChangeHandler: function(v) {
       if (v) {
         esri.show(this._gmapDiv);
@@ -485,11 +485,13 @@
       }
     },
     _resizeHandler: function(extent, height, width) {
-      dojo.style(this._gmapDiv, {
-        width: this._map.width + "px",
-        height: this._map.height + "px"
-      });
-      google.maps.event.trigger(this._gmap, 'resize');
+        if (this._gmapDiv) {
+            dojo.style(this._gmapDiv, {
+              width: this._map.width + "px",
+                height: this._map.height + "px"
+            });
+        }
+        google.maps.event.trigger(this._gmap, 'resize');
     },
     _extentChangeHandler: function(extent, delta, levelChange, lod) {
       if (levelChange) {
@@ -508,7 +510,7 @@
       this._checkZoomLevel();
       this.onMapTypeChange(this._gmap.getMapTypeId());
     },
-    
+
     _checkZoomLevel: function() {
       var id = this._gmap.getMapTypeId();
       var types = this._gmap.mapTypes;
@@ -535,25 +537,25 @@
     _setExtent: function(extent) {
       var ct = this._esriPointToLatLng(extent.getCenter());
       var lv = this._map.getLevel();
-      /*
-       
-       if (lv >= 0) {
-       this._gmap.setZoom(lv);
-       
-       } else {
-       
-       }*/
+
+
+       //if (lv >= 0) {
+       //this._gmap.setZoom(lv);
+
+       //} else {
+
+       //}
       // esrimap.getLevel is not reliable. result differnt if first layer is Bing Map vs arcgis tile layer.
       // Google maps fit always get a smaller zoom.
       this._gmap.fitBounds(this._esriExtentToLatLngBounds(extent.expand(0.5)));
       this._gmap.setCenter(ct);
       this._checkZoomLevel();
-      
+
       //console.log('gmaps fit:'+this._gmap.getZoom()+' emap:'+lv);
     },
     // move the street view control on top of map container.
     // Esri API prevents mouse event progaginate to lower divs inside map container
-    // this method sort of move it up so it can be dragged. A little bit hack, 
+    // this method sort of move it up so it can be dragged. A little bit hack,
     // but as long as stick to a certain version, should still be workable.
     _moveControls: function() {
       if (this._mvHandle) {
@@ -569,7 +571,7 @@
                 dojo.forEach(sv, function(s, idx) {
                   dojo.place(s.parentNode.parentNode, this._controlDiv);
                 }, this);
-                
+
                 this._svMoved = true;
                 this._svVisibleHandle = google.maps.event.addListener(this._streetView, 'visible_changed', dojo.hitch(this, this._streetViewVisibilityChangeHandler));
               }
@@ -602,7 +604,7 @@
         this._toggleEsriControl(vis);
         this.onStreetViewVisibilityChange(vis);
       }
-      
+
     },
     // when oblique is shown, we should disable esri mouse events because the projection changes.
     _mapTiltChangeHandler: function() {
@@ -620,7 +622,7 @@
         dojo.place(this._gmapDiv, this._element);
         this._map.enableMapNavigation();
       }
-      
+
     },
     _toggleEsriControl: function(turnOff) {
       if (turnOff) {
@@ -628,7 +630,7 @@
         this._map.hideZoomSlider();
         // gmaps (as of v3.6) still dispatch events even street view is visible. so we disable it here.
         this._map.disableMapNavigation();
-        
+
       } else {
         if (this._isZoomSliderDefault) {
           this._map.showZoomSlider();
@@ -652,7 +654,7 @@
      * @event
      */
     onLoad: function(){
-      
+
     },
     _esriPointToLatLng: function(pt) {
       var ll = esri.geometry.webMercatorToGeographic(pt);
@@ -666,9 +668,9 @@
       var ext = new esri.geometry.Extent(bounds.getSouthWest().lng(), bounds.getSouthWest().lat(), bounds.getNorthEast().lng(), bounds.getNorthEast().lat());
       return esri.geometry.geographicToWebMercator(ext);
     }
-    
+
   });
-  
+
   dojo.mixin(agsjs.layers.GoogleMapsLayer, {
     MAP_TYPE_SATELLITE: "satellite",
     MAP_TYPE_HYBRID: "hybrid",
@@ -697,11 +699,11 @@
       }]
     }]
   });
-  
-  
+
+
   // extend Esri gallery
   // note: should not use dojo.ready here because it will not run until all outstanding dojo.require resolved.
-  // that maybe too late to construct a BasemapGallery manually. 
+  // that maybe too late to construct a BasemapGallery manually.
   require(['esri/dijit/BasemapGallery'], function(BasemapGallery) {
     //console.log('has esri.dijit.BasemapGallery');
     esri.dijit.BasemapGallery.prototype._original_postMixInProperties = esri.dijit.BasemapGallery.prototype.postMixInProperties;
@@ -739,7 +741,7 @@
             title: "Google Hybrid",
             thumbnailUrl: dojo.moduleUrl("agsjs.dijit", "images/googlehybrid.png")
           }));
-          
+
         }
         if (this.loaded) {
           this._onLoadExt();
@@ -763,7 +765,7 @@
       },
       _onLoadExt: function() {
         //console.log('inside _onLoad ');
-        if (this._onLoadListenerExt) 
+        if (this._onLoadListenerExt)
           dojo.disconnect(this._onLoadListenerExt);
         if (this.toggleReference) {
           dojo.forEach(this.basemaps, function(basemap) {
@@ -787,14 +789,14 @@
             }
           }
         });
-        
+
         if (hasRef && this.toggleReference) {
           basemap.title += '<input type="checkbox"  disabled ' + (vis ? 'checked' : '') + '/>';
           basemap._hasReference = true;
         } else {
           basemap._hasReference = false;
         }
-        
+
         var needsRefresh = 0;
         dojo.forEach(this.basemaps, function(b) {
           // make sure all basemaps are processed. it is decided by each basemap has a _hasReference property, regardless true or false.
@@ -839,14 +841,14 @@
               this.google = this.google || {};
               this.google.mapOptions = this.google.mapOptions || {};
               this.google.mapOptions.mapTypeId = mtype;
-              
+
               layer = new agsjs.layers.GoogleMapsLayer(this.google);
               this.map.addLayer(layer, 0);
               this._googleLayers.push(layer);
             }
           }, this);
         }
-        // when the first basemap is selected, UI may already built, but at that time, 
+        // when the first basemap is selected, UI may already built, but at that time,
         // nothing to mark as selected node because first onSelectionChange has not been fired yet.
         var hasSelectedNode = this._checkSelectedNode();
         if (!hasSelectedNode && this._startupCalled) {
@@ -855,7 +857,7 @@
           // this enables checkbox;
           this._checkSelectedNode();
         }
-        
+
       },
       _checkSelectedNode: function() {
         var hasSelectedNode = false;
@@ -871,7 +873,7 @@
                 blay.visibility = m.checked;
               }
             }, this);
-            
+
           }, this);
         }, this);
         return hasSelectedNode;
@@ -896,7 +898,7 @@
             } else {
               layer.hide();
             }
-            
+
           }
         }, this);
       },
@@ -910,6 +912,3 @@
     });
   });
 //});
-
-
-
