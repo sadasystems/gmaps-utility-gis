@@ -252,8 +252,8 @@ function (declare, lang, array, query, domConstruct, domClass, domStyle, on, Lay
       //this._container = layersDiv;
       // Event connections
       this._connects = [];
-      this._connects.push(on(this, 'VisibilityChange', this, this._visibilityChangeHandler));
-      this._connects.push(on(this, 'OpacityChange', this, this._opacityChangeHandler));
+      this._connects.push(on(this,  'VisibilityChange', lang.hitch(this,  this._visibilityChangeHandler)));
+      this._connects.push(on(this,  'OpacityChange', lang.hitch(this,  this._opacityChangeHandler)));
 
       this.visible = (this.visible === undefined) ? true : this.visible;
       if (this.visible) {
@@ -315,9 +315,9 @@ function (declare, lang, array, query, domConstruct, domClass, domStyle, on, Lay
         this._gmap = gmap;
         this._setExtent(ext);
 
-        this._extentChangeHandle = on(this._map, 'ExtentChange', this, this._extentChangeHandler);
-        this._panHandle = on(this._map, 'Pan', this, this._panHandler);
-        this._resizeHandle = on(this._map, 'Resize', this, this._resizeHandler);
+        this._extentChangeHandle = on(this._map,  'ExtentChange', lang.hitch(this,  this._extentChangeHandler));
+        this._panHandle = on(this._map,  'Pan', lang.hitch(this,  this._panHandler));
+        this._resizeHandle = on(this._map,  'Resize', lang.hitch(this,  this._resizeHandler));
         // 45 deg need move up regardless of streetview
         this._mvHandle = on(this._map, 'MouseMove', lang.hitch(this, this._moveControls));
         this._gmapTypeChangeHandle = google.maps.event.addListener(this._gmap, 'maptypeid_changed', lang.hitch(this, this._mapTypeChangeHandler));
@@ -326,13 +326,13 @@ function (declare, lang, array, query, domConstruct, domClass, domStyle, on, Lay
       } else if (agsjs.onGMapsApiLoad) {
         // did another instance already started loading agsjs API but not done?
         // this should be very very rare because one instance of this layer would be sufficient with setMapTypeId.
-        on(agsjs, 'GMapsApiLoad', this, this._initGMap);
+        on(agsjs,  'GMapsApiLoad', lang.hitch(this,  this._initGMap));
       } else {
         // this is the first instance that tries to load agsjs API on-demand
         agsjs.onGMapsApiLoad = function() {
           // do nothing, just needed to dispatch event.
         };
-        on(agsjs, 'GMapsApiLoad', this, this._initGMap);
+        on(agsjs,  'GMapsApiLoad', lang.hitch(this,  this._initGMap));
         var script = document.createElement('script');
         script.type = 'text/javascript';
         var pro = window.location.protocol;
@@ -456,8 +456,8 @@ function (declare, lang, array, query, domConstruct, domClass, domStyle, on, Lay
         this.visible = true;
         if (this._gmap) {
           google.maps.event.trigger(this._gmap, 'resize');
-          this._panHandle = this._panHandle || on(this._map, "onPan", this, this._panHandler);
-          this._extentChangeHandle = this._extentChangeHandle || on(this._map, "onExtentChange", this, this._extentChangeHandler);
+          this._panHandle = this._panHandle || on(this._map,  "onPan", lang.hitch(this,  this._panHandler));
+          this._extentChangeHandle = this._extentChangeHandle || on(this._map,  "onExtentChange", lang.hitch(this,  this._extentChangeHandler));
           this._setExtent(this._map.extent);
         } else {
           this._initGMap();
@@ -714,7 +714,7 @@ function (declare, lang, array, query, domConstruct, domClass, domStyle, on, Lay
       toggleReference: false,
       postMixInProperties: function() {
         if (!this._OnSelectionChangeListenerExt) {
-          this._onSelectionChangeListenerExt = on(this, 'SelectionChange', this, this._onSelectionChangeExt)
+          this._onSelectionChangeListenerExt = on(this,  'SelectionChange', lang.hitch(this,  this._onSelectionChangeExt))
         }
         if (this.google != undefined && (this.showArcGISBasemaps || this.basemapsGroup)) {
           this.basemaps.push(new Basemap({
@@ -746,7 +746,7 @@ function (declare, lang, array, query, domConstruct, domClass, domStyle, on, Lay
         if (this.loaded) {
           this._onLoadExt();
         } else {
-          this._onLoadListenerExt = on(this, 'Load', this, this._onLoadExt);
+          this._onLoadListenerExt = on(this,  'Load', lang.hitch(this,  this._onLoadExt));
         }
         if (this._original_postMixInProperties) {
           this._original_postMixInProperties();
@@ -760,7 +760,7 @@ function (declare, lang, array, query, domConstruct, domClass, domStyle, on, Lay
         this._original_startup();
         // move from _processReferenceLayersExt because domNode may not be available at the time if manual mode.
         if (!this._onGalleryClickListenerExt) {
-          this._onGalleryClickListenerExt = on(this.domNode, 'click', this, this._onGalleryClickExt);
+          this._onGalleryClickListenerExt = on(this.domNode,  'click', lang.hitch(this,  this._onGalleryClickExt));
         }
       },
       _onLoadExt: function() {
