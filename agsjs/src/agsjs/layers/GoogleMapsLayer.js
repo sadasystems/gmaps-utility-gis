@@ -18,12 +18,12 @@
 //2011-10-05: fixed issues with Chrome, IE7, IE8
 //2011-08-11: updated for JSAPI 2.4. changed package.
 
-//define("agsjs/layers/GoogleMapsLayer", ["dojo", "dijit", "dojox", "dojo/require","esri/dijit/BasemapGallery"], function(dojo, dijit, dojox) {
-
-  /*global dojo esri  agsjs */
-  dojo.require('esri.dijit.BasemapGallery');
-  dojo.provide('agsjs.layers.GoogleMapsLayer');
-  dojo.declare("agsjs.layers.GoogleMapsLayer", esri.layers.Layer, {
+define(
+[
+    "dojo/_base/declare", "dojo/_base/lang", "esri/layers/layer", "esri/layers/TileInfo"
+],
+function (declare, lang, Layer, TileInfo) {
+    var GoogleMapsLayer = declare("GoogleMapsLayer", [Layer], {
     /**
      * @name GoogleMapsLayerOptions
      * @class This is an object literal that specify the option to construct a {@link GoogleMapsLayer}.
@@ -173,7 +173,7 @@
       });
       this.opacity = opts.opacity || 1;
       this._mapOptions = opts.mapOptions || {};
-      this._apiOptions = dojo.mixin({
+      this._apiOptions = lang.mixin({
         sensor: false
       }, opts.apiOptions || {});
 
@@ -241,7 +241,7 @@
       // controlDiv is used to hold pegman and oblique rotater.
       var cdiv = dojo.create('div', {}, map.id);
       cdiv.id = 'gmaps_controls_' + div.id;
-      dojo.style(cdiv, dojo.mixin(style, {
+      dojo.style(cdiv, lang.mixin(style, {
         // width: '0px',
         // height: '0px',
         top: '5px',
@@ -292,7 +292,7 @@
         var ext = this._map.extent;
         var center = this._mapOptions.center || this._esriPointToLatLng(ext.getCenter());
         var level = this._map.getLevel();
-        var myOptions = dojo.mixin({
+        var myOptions = lang.mixin({
           //disableDefaultUI: true,
           center: center,
           zoom: (level > -1) ? level : 1,
@@ -308,7 +308,7 @@
         }
         var gmap = new google.maps.Map(this._gmapDiv, myOptions);
         if (level < 0) {
-          dojo.connect(this._map, 'onLoad', dojo.hitch(this, function() {
+          dojo.connect(this._map, 'onLoad', lang.hitch(this, function() {
             this._setExtent(ext);
           }));
         }
@@ -319,9 +319,9 @@
         this._panHandle = dojo.connect(this._map, 'onPan', this, this._panHandler);
         this._resizeHandle = dojo.connect(this._map, 'onResize', this, this._resizeHandler);
         // 45 deg need move up regardless of streetview
-        this._mvHandle = dojo.connect(this._map, 'onMouseMove', dojo.hitch(this, this._moveControls));
-        this._gmapTypeChangeHandle = google.maps.event.addListener(this._gmap, 'maptypeid_changed', dojo.hitch(this, this._mapTypeChangeHandler));
-        this._gmapTiltChangeHandle = google.maps.event.addListener(this._gmap, 'tilt_changed', dojo.hitch(this, this._mapTiltChangeHandler));
+        this._mvHandle = dojo.connect(this._map, 'onMouseMove', lang.hitch(this, this._moveControls));
+        this._gmapTypeChangeHandle = google.maps.event.addListener(this._gmap, 'maptypeid_changed', lang.hitch(this, this._mapTypeChangeHandler));
+        this._gmapTiltChangeHandle = google.maps.event.addListener(this._gmap, 'tilt_changed', lang.hitch(this, this._mapTiltChangeHandler));
         this.onLoad();
       } else if (agsjs.onGMapsApiLoad) {
         // did another instance already started loading agsjs API but not done?
@@ -573,7 +573,7 @@
                 }, this);
 
                 this._svMoved = true;
-                this._svVisibleHandle = google.maps.event.addListener(this._streetView, 'visible_changed', dojo.hitch(this, this._streetViewVisibilityChangeHandler));
+                this._svVisibleHandle = google.maps.event.addListener(this._streetView, 'visible_changed', lang.hitch(this, this._streetViewVisibilityChangeHandler));
               }
             } else {
               this._svMoved = true;
@@ -671,7 +671,7 @@
 
   });
 
-  dojo.mixin(agsjs.layers.GoogleMapsLayer, {
+  lang.mixin(agsjs.layers.GoogleMapsLayer, {
     MAP_TYPE_SATELLITE: "satellite",
     MAP_TYPE_HYBRID: "hybrid",
     MAP_TYPE_ROADMAP: "roadmap",
@@ -773,7 +773,7 @@
             if (layers.length) {
               this._processReferenceLayersExt(basemap);
             } else {
-              layers.then(dojo.hitch(this, this._processReferenceLayersExt, basemap));
+              layers.then(lang.hitch(this, this._processReferenceLayersExt, basemap));
             }
           }, this);
         }
@@ -911,4 +911,5 @@
       }
     });
   });
-//});
+  return GoogleMapsLayer;
+});
