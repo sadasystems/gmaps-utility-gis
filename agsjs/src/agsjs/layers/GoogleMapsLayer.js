@@ -20,9 +20,9 @@
 
 define(
 [
-    "dojo/_base/declare", "dojo/_base/lang", "esri/layers/layer", "esri/layers/TileInfo"
+    "dojo/_base/declare", "dojo/_base/lang", "dojo/_base/array", "dojo/query", "dojo/dom-construct", "dojo/dom-class", "dojo/dom-style", "dojo/on", "esri/layers/layer", "esri/layers/TileInfo"
 ],
-function (declare, lang, Layer, TileInfo) {
+function (declare, lang, array, query, domConstruct, domClass, domStyle, on, Layer, TileInfo) {
     var GoogleMapsLayer = declare("GoogleMapsLayer", [Layer], {
     /**
      * @name GoogleMapsLayerOptions
@@ -221,27 +221,27 @@ function (declare, lang, Layer, TileInfo) {
         width: '0px',
         height: '0px'
       };
-      var element = dojo.create('div', {}, container);
+      var element = domConstruct.create('div', {}, container);
       if (this.id) {
         element.id = this.id;
       }
-      dojo.style(element, style);
+      domStyle(element, style);
       this._element = element;
-      var div = dojo.create('div', {}, element);
-      dojo.style(div, style);
-      dojo.style(div, 'width', (map.width || container.offsetWidth) + 'px');
-      dojo.style(div, 'height', (map.height || container.offsetHeight) + 'px');
+      var div = domConstruct.create('div', {}, element);
+      domStyle(div, style);
+      domStyle(div, 'width', (map.width || container.offsetWidth) + 'px');
+      domStyle(div, 'height', (map.height || container.offsetHeight) + 'px');
       this._gmapDiv = div;
 
       // topDiv is used to mask all esri events in oblique mode.
-      var tdiv = dojo.create('div', {}, map.id);
+      var tdiv = domConstruct.create('div', {}, map.id);
       tdiv.id = 'gmaps_top_' + div.id;
-      dojo.style(tdiv, style);
+      domStyle(tdiv, style);
       this._topDiv = tdiv;
       // controlDiv is used to hold pegman and oblique rotater.
-      var cdiv = dojo.create('div', {}, map.id);
+      var cdiv = domConstruct.create('div', {}, map.id);
       cdiv.id = 'gmaps_controls_' + div.id;
-      dojo.style(cdiv, lang.mixin(style, {
+      domStyle(cdiv, lang.mixin(style, {
         // width: '0px',
         // height: '0px',
         top: '5px',
@@ -252,8 +252,8 @@ function (declare, lang, Layer, TileInfo) {
       //this._container = layersDiv;
       // Event connections
       this._connects = [];
-      this._connects.push(dojo.connect(this, 'onVisibilityChange', this, this._visibilityChangeHandler));
-      this._connects.push(dojo.connect(this, 'onOpacityChange', this, this._opacityChangeHandler));
+      this._connects.push(on(this, 'VisibilityChange', this, this._visibilityChangeHandler));
+      this._connects.push(on(this, 'OpacityChange', this, this._opacityChangeHandler));
 
       this.visible = (this.visible === undefined) ? true : this.visible;
       if (this.visible) {
@@ -263,11 +263,11 @@ function (declare, lang, Layer, TileInfo) {
     },
     _unsetMap: function(map, layersDiv) {
       // see _setMap. Undocumented method, but probably should be public.
-      dojo.forEach(this._connects, dojo.disconnect, dojo);
+      array.forEach(this._connects, function (handle) { handle.remove(); });
       if (this._streetView) {
         this._streetView.setVisible(false);
       }
-      if (google && google.maps && google.maps.event) {
+      if (typeof google != 'undefined' && google.maps && google.maps.event) {
         if (this._gmapTypeChangeHandle)
           google.maps.event.removeListener(this._gmapTypeChangeHandle);
         if (this._svVisibleHandle)
@@ -275,13 +275,13 @@ function (declare, lang, Layer, TileInfo) {
       }
       if (this._element)
         this._element.parentNode.removeChild(this._element);
-      dojo.destroy(this._element);
+      domConstruct.destroy(this._element);
       if (this._controlDiv)
         this._controlDiv.parentNode.removeChild(this._controlDiv);
-      dojo.destroy(this._controlDiv);
+      domConstruct.destroy(this._controlDiv);
       if (this._topDiv)
         this._topDiv.parentNode.removeChild(this._topDiv);
-      dojo.destroy(this._topDiv);
+      domConstruct.destroy(this._topDiv);
       this._element = this._gmapDiv = this._controlDiv = null;
     },
 
@@ -308,31 +308,31 @@ function (declare, lang, Layer, TileInfo) {
         }
         var gmap = new google.maps.Map(this._gmapDiv, myOptions);
         if (level < 0) {
-          dojo.connect(this._map, 'onLoad', lang.hitch(this, function() {
+          on(this._map, 'Load', lang.hitch(this, function() {
             this._setExtent(ext);
           }));
         }
         this._gmap = gmap;
         this._setExtent(ext);
 
-        this._extentChangeHandle = dojo.connect(this._map, 'onExtentChange', this, this._extentChangeHandler);
-        this._panHandle = dojo.connect(this._map, 'onPan', this, this._panHandler);
-        this._resizeHandle = dojo.connect(this._map, 'onResize', this, this._resizeHandler);
+        this._extentChangeHandle = on(this._map, 'ExtentChange', this, this._extentChangeHandler);
+        this._panHandle = on(this._map, 'Pan', this, this._panHandler);
+        this._resizeHandle = on(this._map, 'Resize', this, this._resizeHandler);
         // 45 deg need move up regardless of streetview
-        this._mvHandle = dojo.connect(this._map, 'onMouseMove', lang.hitch(this, this._moveControls));
+        this._mvHandle = on(this._map, 'MouseMove', lang.hitch(this, this._moveControls));
         this._gmapTypeChangeHandle = google.maps.event.addListener(this._gmap, 'maptypeid_changed', lang.hitch(this, this._mapTypeChangeHandler));
         this._gmapTiltChangeHandle = google.maps.event.addListener(this._gmap, 'tilt_changed', lang.hitch(this, this._mapTiltChangeHandler));
         this.onLoad();
       } else if (agsjs.onGMapsApiLoad) {
         // did another instance already started loading agsjs API but not done?
         // this should be very very rare because one instance of this layer would be sufficient with setMapTypeId.
-        dojo.connect(agsjs, 'onGMapsApiLoad', this, this._initGMap);
+        on(agsjs, 'GMapsApiLoad', this, this._initGMap);
       } else {
         // this is the first instance that tries to load agsjs API on-demand
         agsjs.onGMapsApiLoad = function() {
           // do nothing, just needed to dispatch event.
         };
-        dojo.connect(agsjs, 'onGMapsApiLoad', this, this._initGMap);
+        on(agsjs, 'GMapsApiLoad', this, this._initGMap);
         var script = document.createElement('script');
         script.type = 'text/javascript';
         var pro = window.location.protocol;
@@ -456,8 +456,8 @@ function (declare, lang, Layer, TileInfo) {
         this.visible = true;
         if (this._gmap) {
           google.maps.event.trigger(this._gmap, 'resize');
-          this._panHandle = this._panHandle || dojo.connect(this._map, "onPan", this, this._panHandler);
-          this._extentChangeHandle = this._extentChangeHandle || dojo.connect(this._map, "onExtentChange", this, this._extentChangeHandler);
+          this._panHandle = this._panHandle || on(this._map, "onPan", this, this._panHandler);
+          this._extentChangeHandle = this._extentChangeHandle || on(this._map, "onExtentChange", this, this._extentChangeHandler);
           this._setExtent(this._map.extent);
         } else {
           this._initGMap();
@@ -474,11 +474,11 @@ function (declare, lang, Layer, TileInfo) {
             this._streetView.setVisible(false);
           }
           if (this._panHandle) {
-            dojo.disconnect(this._panHandle);
+            this._panHandle.remove();
             this._panHandle = null;
           }
           if (this._extentChangeHandle) {
-            dojo.disconnect(this._extentChangeHandle);
+            this._extentChangeHandle.remove();
             this._extentChangeHandle = null;
           }
         }
@@ -486,7 +486,7 @@ function (declare, lang, Layer, TileInfo) {
     },
     _resizeHandler: function(extent, height, width) {
         if (this._gmapDiv) {
-            dojo.style(this._gmapDiv, {
+            domStyle(this._gmapDiv, {
               width: this._map.width + "px",
                 height: this._map.height + "px"
             });
@@ -560,16 +560,16 @@ function (declare, lang, Layer, TileInfo) {
     _moveControls: function() {
       if (this._mvHandle) {
         if (!this._gmap) {
-          dojo.disconnect(this._mvHandle);
+          this._mvHandle.remove();
           this._mvHandle = null;
         } else {
           if (!this._svMoved) {
             this._streetView = this._gmap.getStreetView();
             if (this._streetView) {
-              var sv = dojo.query('.gmnoprint img[src*="cb_scout_sprite"]', this._gmapDiv);
+              var sv = query('.gmnoprint img[src*="cb_scout_sprite"]', this._gmapDiv);
               if (sv.length > 0) {
-                dojo.forEach(sv, function(s, idx) {
-                  dojo.place(s.parentNode.parentNode, this._controlDiv);
+                array.forEach(sv, function(s, idx) {
+                  domConstruct.place(s.parentNode.parentNode, this._controlDiv);
                 }, this);
 
                 this._svMoved = true;
@@ -580,18 +580,18 @@ function (declare, lang, Layer, TileInfo) {
             }
           }
           if (!this._rotateMoved) {
-            var ob = dojo.query('.gmnoprint img[src*="rotate"]', this._gmapDiv);
+            var ob = query('.gmnoprint img[src*="rotate"]', this._gmapDiv);
             if (ob.length > 0) {
-              dojo.forEach(ob, function(s, idx) {
-                dojo.place(s.parentNode.parentNode, this._controlDiv);
-                dojo.style(s, 'position', 'absolute');
-                dojo.style(s, 'left', '20px');
+              array.forEach(ob, function(s, idx) {
+                domConstruct.place(s.parentNode.parentNode, this._controlDiv);
+                domStyle(s, 'position', 'absolute');
+                domStyle(s, 'left', '20px');
               }, this);
               this._rotateMoved = true;
             }
           }
           if (this._rotateMoved && this._svMoved) {
-            dojo.disconnect(this._mvHandle);
+            this._mvHandle.remove();
             this._mvHandle = null;
           }
         }
@@ -614,12 +614,12 @@ function (declare, lang, Layer, TileInfo) {
         //this._toggleEsriControl(true);
         //this._map._isPanGMaps = this._map.isPan;
         //this._map.disablePan();
-        dojo.place(this._gmapDiv, this._topDiv);
+        domConstruct.place(this._gmapDiv, this._topDiv);
         this._map.disableMapNavigation();
       } else if (t == 0) {
         //this._toggleEsriControl(false);
         //if (this._map._isPanGMaps) this._map.enablePan();
-        dojo.place(this._gmapDiv, this._element);
+        domConstruct.place(this._gmapDiv, this._element);
         this._map.enableMapNavigation();
       }
 
@@ -708,13 +708,13 @@ function (declare, lang, Layer, TileInfo) {
     //console.log('has esri.dijit.BasemapGallery');
     esri.dijit.BasemapGallery.prototype._original_postMixInProperties = esri.dijit.BasemapGallery.prototype.postMixInProperties;
     esri.dijit.BasemapGallery.prototype._original_startup = esri.dijit.BasemapGallery.prototype.startup;
-    dojo.extend(esri.dijit.BasemapGallery, {
+    lang.extend(esri.dijit.BasemapGallery, {
       google: null,
       _googleLayers: [],
       toggleReference: false,
       postMixInProperties: function() {
         if (!this._OnSelectionChangeListenerExt) {
-          this._onSelectionChangeListenerExt = dojo.connect(this, 'onSelectionChange', this, this._onSelectionChangeExt)
+          this._onSelectionChangeListenerExt = on(this, 'SelectionChange', this, this._onSelectionChangeExt)
         }
         if (this.google != undefined && (this.showArcGISBasemaps || this.basemapsGroup)) {
           this.basemaps.push(new esri.dijit.Basemap({
@@ -723,7 +723,7 @@ function (declare, lang, Layer, TileInfo) {
               type: 'GoogleMapsRoad'
             })],
             title: "Google Road",
-            thumbnailUrl: dojo.moduleUrl("agsjs.dijit", "images/googleroad.png")
+            thumbnailUrl: require.toUrl("agsjs/dijit/images/googleroad.png")
           }));
           this.basemaps.push(new esri.dijit.Basemap({
             id: 'google_satellite',
@@ -731,7 +731,7 @@ function (declare, lang, Layer, TileInfo) {
               type: 'GoogleMapsSatellite'
             })],
             title: "Google Satellite",
-            thumbnailUrl: dojo.moduleUrl("agsjs.dijit", "images/googlesatellite.png")
+            thumbnailUrl: require.toUrl("agsjs/dijit/images/googlesatellite.png")
           }));
           this.basemaps.push(new esri.dijit.Basemap({
             id: 'google_hybrid',
@@ -739,14 +739,14 @@ function (declare, lang, Layer, TileInfo) {
               type: 'GoogleMapsHybrid'
             })],
             title: "Google Hybrid",
-            thumbnailUrl: dojo.moduleUrl("agsjs.dijit", "images/googlehybrid.png")
+            thumbnailUrl: require.toUrl("agsjs/dijit/images/googlehybrid.png")
           }));
 
         }
         if (this.loaded) {
           this._onLoadExt();
         } else {
-          this._onLoadListenerExt = dojo.connect(this, 'onLoad', this, this._onLoadExt);
+          this._onLoadListenerExt = on(this, 'Load', this, this._onLoadExt);
         }
         if (this._original_postMixInProperties) {
           this._original_postMixInProperties();
@@ -760,15 +760,15 @@ function (declare, lang, Layer, TileInfo) {
         this._original_startup();
         // move from _processReferenceLayersExt because domNode may not be available at the time if manual mode.
         if (!this._onGalleryClickListenerExt) {
-          this._onGalleryClickListenerExt = dojo.connect(this.domNode, 'click', this, this._onGalleryClickExt);
+          this._onGalleryClickListenerExt = on(this.domNode, 'click', this, this._onGalleryClickExt);
         }
       },
       _onLoadExt: function() {
         //console.log('inside _onLoad ');
         if (this._onLoadListenerExt)
-          dojo.disconnect(this._onLoadListenerExt);
+          this._onLoadListenerExt.remove();
         if (this.toggleReference) {
-          dojo.forEach(this.basemaps, function(basemap) {
+          array.forEach(this.basemaps, function(basemap) {
             var layers = basemap.getLayers();
             if (layers.length) {
               this._processReferenceLayersExt(basemap);
@@ -781,7 +781,7 @@ function (declare, lang, Layer, TileInfo) {
       _processReferenceLayersExt: function(basemap) {
         var layers = basemap.getLayers();
         var hasRef = false, vis = true;
-        dojo.forEach(layers, function(layer) {
+        array.forEach(layers, function(layer) {
           if (layer.isReference) {
             hasRef = true;
             if (layer.visibility === false) {
@@ -798,7 +798,7 @@ function (declare, lang, Layer, TileInfo) {
         }
 
         var needsRefresh = 0;
-        dojo.forEach(this.basemaps, function(b) {
+        array.forEach(this.basemaps, function(b) {
           // make sure all basemaps are processed. it is decided by each basemap has a _hasReference property, regardless true or false.
           // if there is any basemap not processed, should not refresh.
           // if there are at least one ref layers for that basemap, will refresh.
@@ -821,16 +821,16 @@ function (declare, lang, Layer, TileInfo) {
         var layer;
         if (selected) {
           if (this._googleLayers.length > 0) {
-            dojo.forEach(this._googleLayers, function(lay) {
+            array.forEach(this._googleLayers, function(lay) {
               this.map.removeLayer(lay);
             }, this);
             this._googleLayers.length = 0;
           }
-          dojo.query('input', this.domNode).forEach(function(m) {
+          query('input', this.domNode).forEach(function(m) {
             m.disabled = true;
           });
           var layers = selected.getLayers();
-          dojo.forEach(layers, function(blay) {
+          array.forEach(layers, function(blay) {
             if (blay.type && blay.type.indexOf("GoogleMaps") > -1) {
               var mtype = agsjs.layers.GoogleMapsLayer.MAP_TYPE_ROADMAP;
               if (blay.type == "GoogleMapsSatellite") {
@@ -862,13 +862,13 @@ function (declare, lang, Layer, TileInfo) {
       _checkSelectedNode: function() {
         var hasSelectedNode = false;
         var layers = this.getSelected().getLayers();
-        dojo.query('.esriBasemapGallerySelectedNode', this.domNode).forEach(function(n) {
+        query('.esriBasemapGallerySelectedNode', this.domNode).forEach(function(n) {
           hasSelectedNode = true;
-          dojo.query('input', n).forEach(function(m) {
+          query('input', n).forEach(function(m) {
             m.disabled = false;
             // jsapi fires onSelectionChange before reference layer updates, (should be a bug) so we can not set vis directly.
             //this._setReferenceVis(m.checked);
-            dojo.forEach(layers, function(blay) {
+            array.forEach(layers, function(blay) {
               if (blay.isReference) {
                 blay.visibility = m.checked;
               }
@@ -882,7 +882,7 @@ function (declare, lang, Layer, TileInfo) {
         var t = evt.target;
         if (t.tagName.toLowerCase() == 'input') {
           this._setReferenceVis(t.checked);
-        } else if (dojo.hasClass(t.parentNode, 'esriBasemapGalleryLabelContainer')) {
+        } else if (domClass.contains(t.parentNode, 'esriBasemapGalleryLabelContainer')) {
           // this allows basemap switch by clicking on label.
           t.parentNode.parentNode.firstChild.click();
         }
@@ -890,7 +890,7 @@ function (declare, lang, Layer, TileInfo) {
       _setReferenceVis: function(visible) {
         //arcgis API does not associate the actual created esri.layers.Layer and esri.dijit.BasemapLayer
         // so have to use undocumented _basemapGalleryLayerType.
-        dojo.forEach(this.map.layerIds, function(id) {
+        array.forEach(this.map.layerIds, function(id) {
           var layer = this.map.getLayer(id);
           if (layer._basemapGalleryLayerType == "reference") {
             if (visible) {
