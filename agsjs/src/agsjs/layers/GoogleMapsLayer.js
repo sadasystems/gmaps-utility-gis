@@ -20,9 +20,9 @@
 
 define(
 [
-    "dojo/_base/declare", "dojo/_base/lang", "dojo/_base/array", "dojo/query", "dojo/dom-construct", "dojo/dom-class", "dojo/dom-style", "dojo/on", "esri/layers/layer", "esri/layers/TileInfo"
+    "dojo/_base/declare", "dojo/_base/lang", "dojo/_base/array", "dojo/query", "dojo/dom-construct", "dojo/dom-class", "dojo/dom-style", "dojo/on", "esri/layers/layer", "esri/layers/TileInfo", "esri/domUtils", "esri/geometry/webMercatorUtils"
 ],
-function (declare, lang, array, query, domConstruct, domClass, domStyle, on, Layer, TileInfo) {
+function (declare, lang, array, query, domConstruct, domClass, domStyle, on, Layer, TileInfo, domUtils, webMercatorUtils) {
     var GoogleMapsLayer = declare("GoogleMapsLayer", [Layer], {
     /**
      * @name GoogleMapsLayerOptions
@@ -153,7 +153,7 @@ function (declare, lang, array, query, domConstruct, domClass, domStyle, on, Lay
         }]
       });
 
-      this.fullExtent = new esri.geometry.Extent({
+      this.fullExtent = new Extent({
         xmin: -20037508.34,
         ymin: -20037508.34,
         xmax: 20037508.34,
@@ -162,7 +162,7 @@ function (declare, lang, array, query, domConstruct, domClass, domStyle, on, Lay
           wkid: 102100
         }
       });
-      this.initialExtent = new esri.geometry.Extent({
+      this.initialExtent = new Extent({
         xmin: -20037508.34,
         ymin: -20037508.34,
         xmax: 20037508.34,
@@ -449,9 +449,9 @@ function (declare, lang, array, query, domConstruct, domClass, domStyle, on, Lay
 
     _visibilityChangeHandler: function(v) {
       if (v) {
-        esri.show(this._gmapDiv);
+        domUtils.show(this._gmapDiv);
         //if (!this._svDisabled) {
-        esri.show(this._controlDiv);
+        domUtils.show(this._controlDiv);
         //}
         this.visible = true;
         if (this._gmap) {
@@ -464,8 +464,8 @@ function (declare, lang, array, query, domConstruct, domClass, domStyle, on, Lay
         }
       } else {
         if (this._gmapDiv) {
-          esri.hide(this._gmapDiv);
-          esri.hide(this._controlDiv);
+          domUtils.hide(this._gmapDiv);
+          domUtils.hide(this._controlDiv);
           this.visible = false;
           if (this._gmap) {
             this._map.setExtent(this._latLngBoundsToEsriExtent(this._gmap.getBounds()));
@@ -657,16 +657,16 @@ function (declare, lang, array, query, domConstruct, domClass, domStyle, on, Lay
 
     },
     _esriPointToLatLng: function(pt) {
-      var ll = esri.geometry.webMercatorToGeographic(pt);
+      var ll = webMercatorUtils.webMercatorToGeographic(pt);
       return new google.maps.LatLng(ll.y, ll.x);
     },
     _esriExtentToLatLngBounds: function(ext) {
-      var llb = esri.geometry.webMercatorToGeographic(ext);
+      var llb = webMercatorUtils.webMercatorToGeographic(ext);
       return new google.maps.LatLngBounds(new google.maps.LatLng(llb.ymin, llb.xmin, true), new google.maps.LatLng(llb.ymax, llb.xmax, true));
     },
     _latLngBoundsToEsriExtent: function(bounds) {
-      var ext = new esri.geometry.Extent(bounds.getSouthWest().lng(), bounds.getSouthWest().lat(), bounds.getNorthEast().lng(), bounds.getNorthEast().lat());
-      return esri.geometry.geographicToWebMercator(ext);
+      var ext = new Extent(bounds.getSouthWest().lng(), bounds.getSouthWest().lat(), bounds.getNorthEast().lng(), bounds.getNorthEast().lat());
+      return webMercatorUtils.geographicToWebMercator(ext);
     }
 
   });
@@ -705,10 +705,10 @@ function (declare, lang, array, query, domConstruct, domClass, domStyle, on, Lay
   // note: should not use dojo.ready here because it will not run until all outstanding dojo.require resolved.
   // that maybe too late to construct a BasemapGallery manually.
   require(['esri/dijit/BasemapGallery'], function(BasemapGallery) {
-    //console.log('has esri.dijit.BasemapGallery');
-    esri.dijit.BasemapGallery.prototype._original_postMixInProperties = esri.dijit.BasemapGallery.prototype.postMixInProperties;
-    esri.dijit.BasemapGallery.prototype._original_startup = esri.dijit.BasemapGallery.prototype.startup;
-    lang.extend(esri.dijit.BasemapGallery, {
+    //console.log('has BasemapGallery');
+    BasemapGallery.prototype._original_postMixInProperties = BasemapGallery.prototype.postMixInProperties;
+    BasemapGallery.prototype._original_startup = BasemapGallery.prototype.startup;
+    lang.extend(BasemapGallery, {
       google: null,
       _googleLayers: [],
       toggleReference: false,
@@ -717,25 +717,25 @@ function (declare, lang, array, query, domConstruct, domClass, domStyle, on, Lay
           this._onSelectionChangeListenerExt = on(this, 'SelectionChange', this, this._onSelectionChangeExt)
         }
         if (this.google != undefined && (this.showArcGISBasemaps || this.basemapsGroup)) {
-          this.basemaps.push(new esri.dijit.Basemap({
+          this.basemaps.push(new Basemap({
             id: 'google_road',
-            layers: [new esri.dijit.BasemapLayer({
+            layers: [new BasemapLayer({
               type: 'GoogleMapsRoad'
             })],
             title: "Google Road",
             thumbnailUrl: require.toUrl("agsjs/dijit/images/googleroad.png")
           }));
-          this.basemaps.push(new esri.dijit.Basemap({
+          this.basemaps.push(new Basemap({
             id: 'google_satellite',
-            layers: [new esri.dijit.BasemapLayer({
+            layers: [new BasemapLayer({
               type: 'GoogleMapsSatellite'
             })],
             title: "Google Satellite",
             thumbnailUrl: require.toUrl("agsjs/dijit/images/googlesatellite.png")
           }));
-          this.basemaps.push(new esri.dijit.Basemap({
+          this.basemaps.push(new Basemap({
             id: 'google_hybrid',
-            layers: [new esri.dijit.BasemapLayer({
+            layers: [new BasemapLayer({
               type: 'GoogleMapsHybrid'
             })],
             title: "Google Hybrid",
@@ -888,7 +888,7 @@ function (declare, lang, array, query, domConstruct, domClass, domStyle, on, Lay
         }
       },
       _setReferenceVis: function(visible) {
-        //arcgis API does not associate the actual created esri.layers.Layer and esri.dijit.BasemapLayer
+        //arcgis API does not associate the actual created esri Layer and BasemapLayer
         // so have to use undocumented _basemapGalleryLayerType.
         array.forEach(this.map.layerIds, function(id) {
           var layer = this.map.getLayer(id);
