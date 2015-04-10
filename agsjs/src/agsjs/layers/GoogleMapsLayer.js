@@ -20,9 +20,9 @@
 
 define(
 [
-    "dojo/_base/declare", "dojo/_base/lang", "dojo/_base/array", "dojo/query", "dojo/dom-construct", "dojo/dom-class", "dojo/dom-style", "dojo/on", "esri/layers/layer", "esri/layers/TileInfo", "esri/domUtils", "esri/geometry/webMercatorUtils"
+    "dojo/aspect", "dojo/_base/connect", "dojo/_base/declare", "dojo/_base/lang", "dojo/_base/array", "dojo/query", "dojo/dom-construct", "dojo/dom-class", "dojo/dom-style", "dojo/on", "esri/layers/layer", "esri/layers/TileInfo", "esri/domUtils", "esri/geometry/webMercatorUtils", "esri/geometry/Extent", "esri/dijit/Basemap", "esri/dijit/BasemapLayer"
 ],
-function (declare, lang, array, query, domConstruct, domClass, domStyle, on, Layer, TileInfo, domUtils, webMercatorUtils) {
+function (aspect, connect, declare, lang, array, query, domConstruct, domClass, domStyle, on, Layer, TileInfo, domUtils, webMercatorUtils, Extent, Basemap, BasemapLayer) {
     var GoogleMapsLayer = declare("GoogleMapsLayer", [Layer], {
     /**
      * @name GoogleMapsLayerOptions
@@ -55,7 +55,7 @@ function (declare, lang, array, query, domConstruct, domClass, domStyle, on, Lay
       opts = opts || {};
       // this tileInfo does not actually do anything. It simply tricks nav control to
       // show a slider bar if only gmaps are used, which should be a rare case.
-      this.tileInfo = new esri.layers.TileInfo({
+            this.tileInfo = new TileInfo({
         rows: 256,
         cols: 256,
         dpi: 96,
@@ -225,23 +225,23 @@ function (declare, lang, array, query, domConstruct, domClass, domStyle, on, Lay
       if (this.id) {
         element.id = this.id;
       }
-      domStyle(element, style);
+      domStyle.set(element, style);
       this._element = element;
       var div = domConstruct.create('div', {}, element);
-      domStyle(div, style);
-      domStyle(div, 'width', (map.width || container.offsetWidth) + 'px');
-      domStyle(div, 'height', (map.height || container.offsetHeight) + 'px');
+      domStyle.set(div, style);
+      domStyle.set(div, 'width', (map.width || container.offsetWidth) + 'px');
+      domStyle.set(div, 'height', (map.height || container.offsetHeight) + 'px');
       this._gmapDiv = div;
 
       // topDiv is used to mask all esri events in oblique mode.
       var tdiv = domConstruct.create('div', {}, map.id);
       tdiv.id = 'gmaps_top_' + div.id;
-      domStyle(tdiv, style);
+      domStyle.set(tdiv, style);
       this._topDiv = tdiv;
       // controlDiv is used to hold pegman and oblique rotater.
       var cdiv = domConstruct.create('div', {}, map.id);
       cdiv.id = 'gmaps_controls_' + div.id;
-      domStyle(cdiv, lang.mixin(style, {
+      domStyle.set(cdiv, lang.mixin(style, {
         // width: '0px',
         // height: '0px',
         top: '5px',
@@ -252,8 +252,10 @@ function (declare, lang, array, query, domConstruct, domClass, domStyle, on, Lay
       //this._container = layersDiv;
       // Event connections
       this._connects = [];
-      this._connects.push(on(this,  'VisibilityChange', lang.hitch(this,  this._visibilityChangeHandler)));
-      this._connects.push(on(this,  'OpacityChange', lang.hitch(this,  this._opacityChangeHandler)));
+        //this._connects.push(on(this, 'visibility-change', lang.hitch(this, this._visibilityChangeHandler)));
+        this._connects.push(connect.connect(this, 'onVisibilityChange', this, this._visibilityChangeHandler));
+        //this._connects.push(on(this, 'opacity-change', lang.hitch(this, this._opacityChangeHandler)));
+        this._connects.push(connect.connect(this, 'onOpacityChange', this, this._opacityChangeHandler));
 
       this.visible = (this.visible === undefined) ? true : this.visible;
       if (this.visible) {
@@ -308,31 +310,40 @@ function (declare, lang, array, query, domConstruct, domClass, domStyle, on, Lay
         }
         var gmap = new google.maps.Map(this._gmapDiv, myOptions);
         if (level < 0) {
-          on(this._map, 'Load', lang.hitch(this, function() {
-            this._setExtent(ext);
-          }));
+            //on(this._map, 'load', lang.hitch(this, function () {
+            connect.connect(this._map, 'onLoad', this, function () {
+              this._setExtent(ext);
+            });
+            //}));
         }
         this._gmap = gmap;
         this._setExtent(ext);
 
-        this._extentChangeHandle = on(this._map,  'ExtentChange', lang.hitch(this,  this._extentChangeHandler));
-        this._panHandle = on(this._map,  'Pan', lang.hitch(this,  this._panHandler));
-        this._resizeHandle = on(this._map,  'Resize', lang.hitch(this,  this._resizeHandler));
+        //this._extentChangeHandle = on(this._map, 'extent-change', lang.hitch(this, this._extentChangeHandler));
+        this._extentChangeHandle = connect.connect(this._map, 'onExtentChange', this, this._extentChangeHandler);
+        //this._panHandle = on(this._map, 'pan', lang.hitch(this, this._panHandler));
+        this._panHandle = connect.connect(this._map, 'onPan', this, this._panHandler);
+        //this._resizeHandle = on(this._map, 'resize', lang.hitch(this, this._resizeHandler));
+        this._resizeHandle = connect.connect(this._map, 'onResize', this, this._resizeHandler);
         // 45 deg need move up regardless of streetview
-        this._mvHandle = on(this._map, 'MouseMove', lang.hitch(this, this._moveControls));
+        //this._mvHandle = on(this._map, 'mouse-move', lang.hitch(this, this._moveControls));
+        this._mvHandle = connect.connect(this._map, 'onMouseMove', this, this._moveControls);
         this._gmapTypeChangeHandle = google.maps.event.addListener(this._gmap, 'maptypeid_changed', lang.hitch(this, this._mapTypeChangeHandler));
         this._gmapTiltChangeHandle = google.maps.event.addListener(this._gmap, 'tilt_changed', lang.hitch(this, this._mapTiltChangeHandler));
         this.onLoad();
-      } else if (agsjs.onGMapsApiLoad) {
+            } else if (window['agsjs'] !== undefined && agsjs.onGMapsApiLoad) {
         // did another instance already started loading agsjs API but not done?
         // this should be very very rare because one instance of this layer would be sufficient with setMapTypeId.
-        on(agsjs,  'GMapsApiLoad', lang.hitch(this,  this._initGMap));
+        aspect.after(agsjs, 'onGMapsApiLoad', lang.hitch(this, this._initGMap));
+        //connect.connect(agsjs, 'onGMapsApiLoad', this, this._initGMap);
       } else {
         // this is the first instance that tries to load agsjs API on-demand
+        agsjs = {};
         agsjs.onGMapsApiLoad = function() {
           // do nothing, just needed to dispatch event.
         };
-        on(agsjs,  'GMapsApiLoad', lang.hitch(this,  this._initGMap));
+        aspect.after(agsjs, 'onGMapsApiLoad', lang.hitch(this, this._initGMap));
+        //connect.connect(agsjs, 'onGMapsApiLoad', this, this._initGMap);
         var script = document.createElement('script');
         script.type = 'text/javascript';
         var pro = window.location.protocol;
@@ -430,13 +441,13 @@ function (declare, lang, array, query, domConstruct, domClass, domStyle, on, Lay
       // there is a slight chance they are out of sync, so fix here.
       if (google && google.maps) {
         switch (type) {
-        case agsjs.layers.GoogleMapsLayer.MAP_TYPE_ROADMAP:
+        case GoogleMapsLayer.MAP_TYPE_ROADMAP:
           return google.maps.MapTypeId.ROADMAP;
-        case agsjs.layers.GoogleMapsLayer.MAP_TYPE_HYBRID:
+        case GoogleMapsLayer.MAP_TYPE_HYBRID:
           return google.maps.MapTypeId.HYBRID;
-        case agsjs.layers.GoogleMapsLayer.MAP_TYPE_SATELLITE:
+        case GoogleMapsLayer.MAP_TYPE_SATELLITE:
           return google.maps.MapTypeId.SATELLITE;
-        case agsjs.layers.GoogleMapsLayer.MAP_TYPE_TERRAIN:
+        case GoogleMapsLayer.MAP_TYPE_TERRAIN:
           return google.maps.MapTypeId.TERRAIN;
         }
       }
@@ -455,12 +466,14 @@ function (declare, lang, array, query, domConstruct, domClass, domStyle, on, Lay
         //}
         this.visible = true;
         if (this._gmap) {
-          google.maps.event.trigger(this._gmap, 'resize');
-          this._panHandle = this._panHandle || on(this._map,  "onPan", lang.hitch(this,  this._panHandler));
-          this._extentChangeHandle = this._extentChangeHandle || on(this._map,  "onExtentChange", lang.hitch(this,  this._extentChangeHandler));
-          this._setExtent(this._map.extent);
+            google.maps.event.trigger(this._gmap, 'resize');
+            //this._panHandle = this._panHandle || on(this._map, "pan", lang.hitch(this, this._panHandler));
+            this._panHandle = this._panHandle || connect.connect(this._map, "onPan", this, this._panHandler);
+            //this._extentChangeHandle = this._extentChangeHandle || on(this._map, "extent-change", lang.hitch(this, this._extentChangeHandler));
+            this._extentChangeHandle = this._extentChangeHandle || connect.connect(this._map, "onExtentChange", this, this._extentChangeHandler);
+            this._setExtent(this._map.extent);
         } else {
-          this._initGMap();
+            this._initGMap();
         }
       } else {
         if (this._gmapDiv) {
@@ -486,7 +499,7 @@ function (declare, lang, array, query, domConstruct, domClass, domStyle, on, Lay
     },
     _resizeHandler: function(extent, height, width) {
         if (this._gmapDiv) {
-            domStyle(this._gmapDiv, {
+            domStyle.set(this._gmapDiv, {
               width: this._map.width + "px",
                 height: this._map.height + "px"
             });
@@ -541,9 +554,9 @@ function (declare, lang, array, query, domConstruct, domClass, domStyle, on, Lay
 
        //if (lv >= 0) {
        //this._gmap.setZoom(lv);
-
+            //
        //} else {
-
+            //
        //}
       // esrimap.getLevel is not reliable. result differnt if first layer is Bing Map vs arcgis tile layer.
       // Google maps fit always get a smaller zoom.
@@ -584,8 +597,8 @@ function (declare, lang, array, query, domConstruct, domClass, domStyle, on, Lay
             if (ob.length > 0) {
               array.forEach(ob, function(s, idx) {
                 domConstruct.place(s.parentNode.parentNode, this._controlDiv);
-                domStyle(s, 'position', 'absolute');
-                domStyle(s, 'left', '20px');
+                domStyle.set(s, 'position', 'absolute');
+                domStyle.set(s, 'left', '20px');
               }, this);
               this._rotateMoved = true;
             }
@@ -671,7 +684,7 @@ function (declare, lang, array, query, domConstruct, domClass, domStyle, on, Lay
 
   });
 
-  lang.mixin(agsjs.layers.GoogleMapsLayer, {
+    lang.mixin(GoogleMapsLayer, {
     MAP_TYPE_SATELLITE: "satellite",
     MAP_TYPE_HYBRID: "hybrid",
     MAP_TYPE_ROADMAP: "roadmap",
@@ -704,8 +717,8 @@ function (declare, lang, array, query, domConstruct, domClass, domStyle, on, Lay
   // extend Esri gallery
   // note: should not use dojo.ready here because it will not run until all outstanding dojo.require resolved.
   // that maybe too late to construct a BasemapGallery manually.
-  require(['esri/dijit/BasemapGallery'], function(BasemapGallery) {
-    //console.log('has BasemapGallery');
+    require(["dojo/_base/lang", "esri/dijit/BasemapGallery"], function (lang, BasemapGallery) {
+        //console.log('has esri.dijit.BasemapGallery');
     BasemapGallery.prototype._original_postMixInProperties = BasemapGallery.prototype.postMixInProperties;
     BasemapGallery.prototype._original_startup = BasemapGallery.prototype.startup;
     lang.extend(BasemapGallery, {
@@ -713,8 +726,9 @@ function (declare, lang, array, query, domConstruct, domClass, domStyle, on, Lay
       _googleLayers: [],
       toggleReference: false,
       postMixInProperties: function() {
-        if (!this._OnSelectionChangeListenerExt) {
-          this._onSelectionChangeListenerExt = on(this,  'SelectionChange', lang.hitch(this,  this._onSelectionChangeExt))
+        if (!this._onSelectionChangeListenerExt) {
+            //this._onSelectionChangeListenerExt = on(this, 'selection-change', lang.hitch(this, this._onSelectionChangeExt));
+            this._onSelectionChangeListenerExt = connect.connect(this, 'onSelectionChange', this, this._onSelectionChangeExt);
         }
         if (this.google != undefined && (this.showArcGISBasemaps || this.basemapsGroup)) {
           this.basemaps.push(new Basemap({
@@ -746,7 +760,8 @@ function (declare, lang, array, query, domConstruct, domClass, domStyle, on, Lay
         if (this.loaded) {
           this._onLoadExt();
         } else {
-          this._onLoadListenerExt = on(this,  'Load', lang.hitch(this,  this._onLoadExt));
+            //this._onLoadListenerExt = on(this, 'load', lang.hitch(this, this._onLoadExt));
+            this._onLoadListenerExt = connect.connect(this, 'onLoad', this, this._onLoadExt);
         }
         if (this._original_postMixInProperties) {
           this._original_postMixInProperties();
@@ -758,9 +773,11 @@ function (declare, lang, array, query, domConstruct, domClass, domStyle, on, Lay
         // _startupCalled is used to flag if we need refresh UI for toggle reference layer
         this._startupCalled = true;
         this._original_startup();
+
         // move from _processReferenceLayersExt because domNode may not be available at the time if manual mode.
         if (!this._onGalleryClickListenerExt) {
-          this._onGalleryClickListenerExt = on(this.domNode,  'click', lang.hitch(this,  this._onGalleryClickExt));
+            //this._onGalleryClickListenerExt = on(this.domNode, 'click', lang.hitch(this, this._onGalleryClickExt));
+            this._onGalleryClickListenerExt = connect.connect(this.domNode, 'onClick', this, this._onGalleryClickExt);
         }
       },
       _onLoadExt: function() {
@@ -832,17 +849,17 @@ function (declare, lang, array, query, domConstruct, domClass, domStyle, on, Lay
           var layers = selected.getLayers();
           array.forEach(layers, function(blay) {
             if (blay.type && blay.type.indexOf("GoogleMaps") > -1) {
-              var mtype = agsjs.layers.GoogleMapsLayer.MAP_TYPE_ROADMAP;
+                            var mtype = GoogleMapsLayer.MAP_TYPE_ROADMAP;
               if (blay.type == "GoogleMapsSatellite") {
-                mtype = agsjs.layers.GoogleMapsLayer.MAP_TYPE_SATELLITE;
+                                mtype = GoogleMapsLayer.MAP_TYPE_SATELLITE;
               } else if (blay.type == "GoogleMapsHybrid") {
-                mtype = agsjs.layers.GoogleMapsLayer.MAP_TYPE_HYBRID;
+                                mtype = GoogleMapsLayer.MAP_TYPE_HYBRID;
               }
               this.google = this.google || {};
               this.google.mapOptions = this.google.mapOptions || {};
               this.google.mapOptions.mapTypeId = mtype;
 
-              layer = new agsjs.layers.GoogleMapsLayer(this.google);
+                            layer = new GoogleMapsLayer(this.google);
               this.map.addLayer(layer, 0);
               this._googleLayers.push(layer);
             }
