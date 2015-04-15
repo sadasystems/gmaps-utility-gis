@@ -1,91 +1,195 @@
- <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
+ <!DOCTYPE HTML>
 <html>
     <head>
         <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
-        <meta http-equiv="X-UA-Compatible" content="IE=7,IE=9" />
-        <!--The viewport meta tag is used to improve the presentation and behavior of the samples
-        on iOS devices-->
+        <!--The viewport meta tag is used to improve the presentation and behavior of the samples on iOS devices-->
         <meta name="viewport" content="initial-scale=1, maximum-scale=1,user-scalable=no"/>
-        <title></title>
-        <link rel="stylesheet" type="text/css" href="http://serverapi.arcgisonline.com/jsapi/arcgis/3.0/js/dojo/dijit/themes/claro/claro.css">
+        <title>Google Base Maps Gallery Example</title>
+        <link rel="stylesheet" href="//js.arcgis.com/3.13/dijit/themes/claro/claro.css">
+        <link rel="stylesheet" href="//js.arcgis.com/3.13/esri/css/esri.css">
         <style type="text/css">
-            html, body {
+            html, body, #map {
                 height: 100%;
-                width: 100%;
                 margin: 0;
                 padding: 0;
             }
-           
         </style>
         <script type="text/javascript">
-           var djConfig = {
-              parseOnLoad: true,
-              packages: [{
-                "name": "agsjs",
-                "location": location.pathname.replace(/\/[^/]+$/, "")+'/../src/agsjs'
-               //"location": 'http://gmaps-utility-gis.googlecode.com/svn/tags/agsjs/2.02/xbuild/agsjs' // for xdomain load
-              }]
-            };
+            var dojoConfig = {
+               parseOnLoad: false,
+               packages: [{
+                 "name": "agsjs",
+                 "location": location.pathname.replace(/\/[^/]+$/, "")+'/../src/agsjs'
+               }]
+             };
         </script>
-        <script type="text/javascript" src="http://serverapi.arcgisonline.com/jsapi/arcgis/?v=3.0"-->
+        <script type="text/javascript" src="//js.arcgis.com/3.13/">
         </script>
         <script type="text/javascript">
-            dojo.require("dijit.layout.BorderContainer");
-            dojo.require("dijit.layout.ContentPane");
-            dojo.require("esri.map");
-            dojo.require("esri.virtualearth.VETiledLayer");
-            dojo.require("dijit.TitlePane");
-            dojo.require("esri.dijit.BasemapGallery");
-            dojo.require("esri.arcgis.utils");
-            dojo.require("agsjs.layers.GoogleMapsLayer");
-            
-            var map = null;
-            
-            function init() {
-              var initExtent = new esri.geometry.Extent({
+        var map, basemapLayers = [], gallery;
+        require([
+            "esri/map",
+            "dojo/parser",
+            "dijit/layout/BorderContainer",
+            "dijit/layout/ContentPane",
+            "esri/virtualearth/VETiledLayer",
+            "dijit/TitlePane",
+            "esri/dijit/Basemap",
+            "esri/dijit/BasemapLayer",
+            "esri/dijit/BasemapGallery",
+            "esri/geometry/Extent",
+            // "esri/arcgis/utils",
+            // "dojo/dom",
+            "dojo/on",
+            "agsjs/layers/GoogleMapsLayer",
+            "dojo/domReady!"
+        ], function(
+            Map,
+            parser,
+            BorderContainer,
+            ContentPane,
+            VETiledLayer,
+            TitlePane,
+            Basemap,
+            BasemapLayer,
+            BasemapGallery,
+            Extent,
+            // esriUtils,
+            // dom,
+            on,
+            GoogleMapsLayer
+        ){
+            // map = new Map("map", {
+            //     center: [-56.049, 38.485],
+            //     zoom: 3,
+            //     basemap: "streets"
+            // });
+            parser.parse();
+
+            var initializeBaseMaps = function() {
+                basemapLayers.push(new Basemap({
+                    id: 'OpenStreetmap',
+                    layers: [new BasemapLayer({
+                        type: 'OpenStreetMap'
+                    })],
+                    title: 'Open Street Map',
+                    thumbnailUrl: 'http://www.arcgis.com/sharing/rest/content/items/5d2bfa736f8448b3a1708e1f6be23eed/info/thumbnail/temposm.jpg'
+                }));
+
+                basemapLayers.push(new Basemap({
+                    id: 'topographic',
+                    layers: [new BasemapLayer({
+                        url: 'http://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer'
+                    })],
+                    title: 'Topographic',
+                    thumbnailUrl: 'http://www.arcgis.com/sharing/rest/content/items/6e03e8c26aad4b9c92a87c1063ddb0e3/info/thumbnail/topo_map_2.jpg'
+                }));
+
+                basemapLayers.push(new Basemap({
+                    id: 'streets',
+                    layers: [new BasemapLayer({
+                        url: 'http://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer'
+                    })],
+                    title: 'Streets',
+                    thumbnailUrl: 'http://www.arcgis.com/sharing/rest/content/items/d8855ee4d3d74413babfb0f41203b168/info/thumbnail/world_street_map.jpg'
+                }));
+
+                basemapLayers.push(new Basemap({
+                    id: 'gray',
+                    layers: [new BasemapLayer({
+                        url: 'http://services.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer'
+                    })],
+                    title: 'Light Gray Canvas',
+                    // thumbnailUrl: 'http://www.arcgis.com/sharing/rest/content/items/8b3d38c0819547faa83f7b7aca80bd76/info/thumbnail/light_canvas.jpg'
+                    thumbnailUrl: 'http://www.arcgis.com/sharing/rest/content/items/8b3b470883a744aeb60e5fff0a319ce7/info/thumbnail/light_gray_canvas.jpg'
+                }));
+
+                basemapLayers.push(new Basemap({
+                   id: 'natgeo',
+                   layers: [new BasemapLayer({
+                       url: 'http://services.arcgisonline.com/ArcGIS/rest/services/NatGeo_World_Map/MapServer'
+                   })],
+                   title: 'National Geographic',
+                   thumbnailUrl: 'http://www.arcgis.com/sharing/rest/content/items/509e2d6b034246d692a461724ae2d62c/info/thumbnail/natgeo.jpg'
+                }));
+
+                basemapLayers.push(new Basemap({
+                    id: 'google_road',
+                    layers: [new BasemapLayer({
+                        type: 'GoogleMapsRoad'
+                    })],
+                    title: "Google Road",
+                    thumbnailUrl: require.toUrl("agsjs/dijit/images/googleroad.png")
+                }));
+
+                basemapLayers.push(new Basemap({
+                    id: 'google_hybrid',
+                    layers: [new BasemapLayer({
+                        type: 'GoogleMapsHybrid'
+                    })],
+                    title: "Google Hybrid",
+                    thumbnailUrl: require.toUrl("agsjs/dijit/images/googlehybrid.png")
+                }));
+
+                basemapLayers.push(new Basemap({
+                    id: 'google_satellite',
+                    layers: [new BasemapLayer({
+                        type: 'GoogleMapsSatellite'
+                    })],
+                    title: "Google Satellite",
+                    thumbnailUrl: require.toUrl("agsjs/dijit/images/googlesatellite.png")
+                }));
+            };
+            function createBasemapGallery() {
+                //add the basemap gallery, in this case we'll display maps from ArcGIS.com including bing maps
+                gallery = new BasemapGallery({
+                    //setting the maps explicitly works
+                    basemaps: basemapLayers,
+                    showArcGISBasemaps: false,
+                    //showArcGISBasemaps: true,//this doesn't centre the map on the specified extent... centres at 0,0
+                    toggleReference: true,
+                    google: {
+                        apiOptions: {
+                            v: '3.6' // use a specific version is recommended for production system.
+                        }//,
+                        // mapOptions: {
+                        //     streetViewControl: false
+                        // }
+                    },
+                    map: map
+                }, "basemapGallery");
+                gallery.startup();
+                on(gallery, "error", function(msg) {
+                    if (console) console.log(msg)
+                });
+            }
+
+            var initExtent = new Extent({
                 "xmin": -9031493,
                 "ymin": 4170327,
                 "xmax": -8962700,
                 "ymax": 4216189,
                 "spatialReference": {
-                  "wkid": 102100
+                    "wkid": 102100
                 }
-              });
-              map = new esri.Map("map", {
-                extent: initExtent
-              });
-              
-              createBasemapGallery();
-            }
-            
-            function createBasemapGallery() {
-              //add the basemap gallery, in this case we'll display maps from ArcGIS.com including bing maps
-              var basemapGallery = new esri.dijit.BasemapGallery({
-                showArcGISBasemaps: true,
-                toggleReference: true,
-                google: {
-                  apiOptions: {
-                    v: '3.6' // use a specific version is recommended for production system.
-                  }
-                },
-                map: map
-              }, "basemapGallery");
-              basemapGallery.startup();
-              
-              dojo.connect(basemapGallery, "onError", function(msg) {
-                if (console) console.log(msg)
-              });
-            }
-            
-            dojo.addOnLoad(init);
+            });
+
+            map = new Map("map", {
+                extent: initExtent//,
+                //basemap: "streets"
+            });
+            initializeBaseMaps();
+            createBasemapGallery();
+            gallery.select("google_road");
+        });
         </script>
     </head>
     <body class="claro">
-        <div dojotype="dijit.layout.BorderContainer" design="headline" gutters="false" style="width:100%;height:100%;margin:0;">
-            <div id="map" dojotype="dijit.layout.ContentPane" region="center" style="border:1px solid #000;padding:0;">
+        <div data-dojo-type="dijit/layout/BorderContainer" data-dojo-props="design:'headline', gutters:false" style="width:100%;height:100%;margin:0;">
+            <div id="map" data-dojo-type="dijit/layout/ContentPane" data-dojo-props="region:'center'" style="border:1px solid #000;padding:0;">
                 <div style="position:absolute; right:20px; top:10px; z-Index:999;">
-                    <div dojoType="dijit.TitlePane" title="Switch Basemap (Default)" closable="false" open="false">
-                        <div dojoType="dijit.layout.ContentPane" style="width:380px; height:280px; overflow:auto;">
+                    <div data-dojo-type="dijit/TitlePane" title="Switch Basemap (Default)" data-dojo-props="open:'false'">
+                        <div data-dojo-type="dijit/layout/ContentPane" style="width:380px; height:280px; overflow:auto;">
                             <div id="basemapGallery">
                             </div>
                         </div>
